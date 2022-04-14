@@ -2,6 +2,8 @@
 #include "user_input.h"
 #include "parallel_engine.h"
 #include <time.h>
+#include <stdio.h>
+#include <sys/time.h>
 
 void Handle_Input(char* input, Board_Data_t* board_data, trans_table_t* tt){
 
@@ -10,6 +12,8 @@ void Handle_Input(char* input, Board_Data_t* board_data, trans_table_t* tt){
     if(strcmp(p_in1, "reset") == 0 || strcmp(p_in1, "Reset") == 0){
         if(strcmp(parsed_input[1], "zob") == 0){
             Reset_Zob_Key(board_data);
+        }else if(strcmp(parsed_input[1],"tt") == 0){
+            Reset_Trans_Table(tt);
         }else{
             char* fen = Input_Reset_String(parsed_input[1]);
             Set_From_Fen(fen, board_data); 
@@ -49,12 +53,18 @@ void Input_Parallel_Perft(char** parsed_input, Board_Data_t* board_data, trans_t
     //technically cannot search past a depth of 9 for now.  Ok bc perft takes hours to
     //get to 9 anyway.
     int depth = parsed_input[3][0] - '0';
-    int ply = 0;
-
-    clock_t start = clock(), diff;
+    
+    //clock_t start = clock(), diff;
+    struct timeval start, end;
+    gettimeofday(&start,NULL);
     search_data_t search_data = Parallel_Perft(board_data, depth, to_move, tt);
-    diff = clock() - start;
-    long msec = diff * 1000 / CLOCKS_PER_SEC;
+    gettimeofday(&end,NULL);
+
+    long sec_diff = (long)(end.tv_sec - start.tv_sec);
+    long usec_diff = (long)(end.tv_usec - start.tv_usec);
+    long msec = sec_diff * 1000 + usec_diff / 1000;
+    //diff = clock() - start;
+    //long msec = diff * 1000 / CLOCKS_PER_SEC;
 
     printf("Milliseconds: %ld\n", msec);
     if(msec > 1000){
@@ -69,7 +79,17 @@ void Input_Parallel_Perft(char** parsed_input, Board_Data_t* board_data, trans_t
     printf("CheckMates: %d\n", search_data.checkmates);
 }
 
-
+void Reset_Trans_Table(trans_table_t* tt){
+    int tt_size = tt->size;
+    search_data_t neg_data = {-1,-1,-1,-1,-1,-1,-1};
+    tt_entry_t neg_entry;
+    neg_entry.search_data = neg_data;
+    neg_entry.depth = -1;
+    neg_entry.zob_key = FULL;
+    for(int i = 0; i < tt_size; i++){
+        tt->table_head[i] = neg_entry;
+    }
+}
 //makes it so that I can easily load in different fen strings for testing.
 char* Input_Reset_String(char* input){
     if(strcmp(input, "kiwipete") == 0 || strcmp(input, "Kiwipete") == 0){

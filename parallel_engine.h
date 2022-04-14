@@ -17,6 +17,7 @@ typedef struct Thread_Info{
     Board_Data_t* board_data;
     int thread_num;
     pthread_mutex_t* search_data_mut;
+    move_t* move;
 } thread_info_t;
 
 search_data_t Parallel_Perft(Board_Data_t* board_data, int depth, int isMaximizing, trans_table_t* tt);

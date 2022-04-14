@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 //#define ERROR_CHECK
-#define USE_TT 0
+#define USE_TT 1
 
 search_data_t Perft(Board_Data_t* board_data, Search_Mem_t* search_mem, int depth, int ply, int isMaximizing, trans_table_t* tt){
     /*
@@ -113,7 +113,6 @@ void Perft_Expanded(Board_Data_t* board_data, Search_Mem_t* search_mem, int dept
         if(In_Check(copy, isMaximizing) == 0){
             search_data = Perft(copy, search_mem, depth-1, 1, (~isMaximizing & 1), tt);
         }
-        Delete_Board(copy, 0);
         move_idx++;
         if(search_data.pos_searched > 0){
             printf("\t%s: %d\n", move_str, search_data.pos_searched);
@@ -125,6 +124,7 @@ void Perft_Expanded(Board_Data_t* board_data, Search_Mem_t* search_mem, int dept
         }
         free(move_str);
     }
+    Delete_Board(copy, 0);
     printf("\n");
 }
 

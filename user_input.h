@@ -25,5 +25,8 @@ void Update_Flags_From_Input(char* flag, move_t* move);
 char* Input_Reset_String(char* input);
 void Input_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt);
 void Input_Expanded_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt);
+void Input_Parallel_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt);
+void Reset_Trans_Table(trans_table_t* tt);
+
 
 #endif

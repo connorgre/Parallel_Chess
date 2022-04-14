@@ -39,7 +39,7 @@ search_data_t Parallel_Perft(Board_Data_t* board_data, int depth, int isMaximizi
     while(moves[num_moves].from != FULL){
         num_moves++;
     }
-    num_moves--;
+    //num_moves--;
     thread_info_t* t_info_arr = (thread_info_t*)malloc(sizeof(thread_info_t)*num_moves);
 
     pthread_mutex_t search_data_mut;
@@ -47,12 +47,13 @@ search_data_t Parallel_Perft(Board_Data_t* board_data, int depth, int isMaximizi
 
     for(int i = 0; i < num_moves; i++){
         t_info_arr[i].tt = tt;
-        Init_Search_Memory((t_info_arr[i].search_mem));
+        (t_info_arr[i].search_mem) = Init_Search_Memory();
         t_info_arr[i].search_data = &search_data;
         t_info_arr[i].depth = depth;
         t_info_arr[i].board_data = board_data;
         t_info_arr[i].thread_num = i;
         t_info_arr[i].search_data_mut = &search_data_mut;
+        t_info_arr[i].move = &(moves[i]);
     }
     pthread_t pid[num_moves];
     for(int i = 0; i < num_moves; i++){
@@ -60,8 +61,11 @@ search_data_t Parallel_Perft(Board_Data_t* board_data, int depth, int isMaximizi
     }
     for(int i = 0; i < num_moves; i++){
         pthread_join(pid[i], NULL);
+    }
+    for(int i = 0; i < num_moves; i++){
         Delete_Search_Memory((t_info_arr[i].search_mem));
     }
+
     free(t_info_arr);
     free(moves);
     pthread_mutex_destroy(&search_data_mut);
@@ -76,13 +80,22 @@ void* Perft_Thread(void * thread_info){
     Board_Data_t* board_data = t_info->board_data;
     pthread_mutex_t* sd_mut = t_info->search_data_mut;
     search_data_t* search_data = t_info->search_data;
+    move_t* move = t_info->move;
     search_data_t thread_search_data;   
 
-    thread_search_data = Perft(board_data, search_mem, depth, 0, board_data->to_move, tt);
-    
-    pthread_mutex_lock(sd_mut);
-        Add_Search_Data(search_data,&thread_search_data);
-    pthread_mutex_unlock(sd_mut);
+    //make the threads move
+    int ply = 0;
+    Board_Data_t* copy = search_mem->copy_arr[ply];
+    Copy_Board(copy, board_data);
+    Do_Move(copy, move);
+
+    if(In_Check(copy, copy->to_move) == 0){
+        thread_search_data = Perft(copy, search_mem, depth-1, ply+1, copy->to_move, tt);
+        
+        pthread_mutex_lock(sd_mut);
+            Add_Search_Data(search_data,&thread_search_data);
+        pthread_mutex_unlock(sd_mut);
+    }
     return NULL;
 }
 
