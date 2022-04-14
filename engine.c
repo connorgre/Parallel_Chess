@@ -42,7 +42,7 @@ search_data_t Perft(Board_Data_t* board_data, Search_Mem_t* search_mem, int dept
             search_data.checks++;
         } else{
             #if USE_TT
-                Insert_Trans_Table(board_data->zob_key, depth, search_data, tt);
+                Insert_Trans_Table(board_data->zob_key, depth, &search_data, tt);
             #endif
             return search_data;
         }
@@ -86,7 +86,7 @@ search_data_t Perft(Board_Data_t* board_data, Search_Mem_t* search_mem, int dept
         }
     }
     #if USE_TT
-        Insert_Trans_Table(board_data->zob_key, depth, search_data, tt);
+        Insert_Trans_Table(board_data->zob_key, depth, &search_data, tt);
     #endif
     if((search_data.pos_searched) % 10000000 == 0 && search_data.pos_searched != 0){
         printf("\tsearched %d\n", search_data.pos_searched);

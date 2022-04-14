@@ -55,20 +55,25 @@ void Input_Parallel_Perft(char** parsed_input, Board_Data_t* board_data, trans_t
     int depth = parsed_input[3][0] - '0';
     
     //clock_t start = clock(), diff;
+    search_data_t search_data;
     struct timeval start, end;
     gettimeofday(&start,NULL);
-    search_data_t search_data = Parallel_Perft(board_data, depth, to_move, tt);
+    if(strcmp(parsed_input[4],"limited") == 0 || strcmp(parsed_input[4],"Limited") == 0){
+        search_data = Parallel_Perft_Limited(board_data, depth, to_move, tt);
+    }else{
+        search_data = Parallel_Perft(board_data, depth, to_move, tt);
+    }
     gettimeofday(&end,NULL);
 
     long sec_diff = (long)(end.tv_sec - start.tv_sec);
     long usec_diff = (long)(end.tv_usec - start.tv_usec);
-    long msec = sec_diff * 1000 + usec_diff / 1000;
+    long msec = (sec_diff * 1000) + (usec_diff / 1000);
     //diff = clock() - start;
     //long msec = diff * 1000 / CLOCKS_PER_SEC;
 
     printf("Milliseconds: %ld\n", msec);
     if(msec > 1000){
-        printf("\tNodes/sec: %ld\n", (search_data.pos_searched)/(msec/1000));
+        printf("\tKnps: %ld\n", search_data.pos_searched/msec);
     }
     printf("Searched: %d\n", search_data.pos_searched);
     printf("Captures: %d\n", search_data.captures);
@@ -86,6 +91,7 @@ void Reset_Trans_Table(trans_table_t* tt){
     neg_entry.search_data = neg_data;
     neg_entry.depth = -1;
     neg_entry.zob_key = FULL;
+    neg_entry.num_using = -1;
     for(int i = 0; i < tt_size; i++){
         tt->table_head[i] = neg_entry;
     }
@@ -145,7 +151,7 @@ void Input_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* t
 
     printf("Milliseconds: %ld\n", msec);
     if(msec > 1000){
-        printf("\tNodes/sec: %ld\n", (search_data.pos_searched)/(msec/1000));
+        printf("\t Knps: %ld\n", search_data.pos_searched/msec);
     }
     printf("Searched: %d\n", search_data.pos_searched);
     printf("Captures: %d\n", search_data.captures);

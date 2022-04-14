@@ -28,6 +28,7 @@ typedef struct TT_Entry{
     U64 zob_key;
     int depth;
     search_data_t search_data;
+    int num_using;
 }   tt_entry_t;
 
 typedef struct Trans_Table{

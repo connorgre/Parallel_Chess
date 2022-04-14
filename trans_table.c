@@ -16,6 +16,7 @@ trans_table_t* Init_Trans_Table(int size){
     neg_entry.search_data = neg_data;
     neg_entry.depth = -1;
     neg_entry.zob_key = FULL;
+    neg_entry.num_using = -1;
 
     for(int i = 0; i < size; i++){
         tt->table_head[i] = neg_entry;
@@ -46,80 +47,73 @@ void Delete_Trans_Table(trans_table_t* tt){
 search_data_t Probe_Trans_Table(U64 zob_key, int depth, trans_table_t* tt){
     int idx = (zob_key+depth) % tt->size;
     int mut_idx = (zob_key+depth) % NUM_MUTEX;
-    #ifdef USE_MUTEX
     if(pthread_mutex_lock(&(tt->mutex_arr[mut_idx]))){
         printf("Mutex lock error\n");
     }
-    #endif
     //we found the position
     if(tt->table_head[idx].zob_key == zob_key && tt->table_head[idx].depth == depth){
-        #ifdef ERROR_CHECK
-            if(tt->table_head[idx].search_data.pos_searched <= 0 || tt->table_head[idx].search_data.pos_searched > 200000){
-                printf("Error, position in tt with bad value: %d\n",tt->table_head[idx].search_data.pos_searched);
-            }
-            if(tt->table_head[idx].depth == 1){
-                if(tt->table_head[idx].search_data.pos_searched > 100){
-                    printf("Error: depth 1 has more than 100 moves: (%d)\n", tt->table_head[idx].search_data.pos_searched);
-                }
-            }
-        #endif
-        #ifdef USE_MUTEX
         if(pthread_mutex_unlock(&(tt->mutex_arr[mut_idx]))){
             printf("Mutex lock error\n");
         }
-        #endif
         return tt->table_head[idx].search_data;
-    //first time encountering the position
+    //first time encountering the position -- set the zob key but leave depth as -1.
     }else if(tt->table_head[idx].depth == -1 && tt->table_head[idx].zob_key == FULL){
         //node never been explored
-        tt->table_head[idx].depth = depth;
+        tt->table_head[idx].zob_key = zob_key;
+        tt->table_head[idx].num_using++;
         search_data_t neg_data = {-1,-1,-1,-1,-1,-1,-1};
-        #ifdef USE_MUTEX
         if(pthread_mutex_unlock(&(tt->mutex_arr[mut_idx]))){
             printf("Mutex lock error\n");
         }
-        #endif
         return neg_data;
     //means the position has been found, but another node is already exploring it 
         //(so no point in exploring it twice)
-    }else if(tt->table_head[idx].zob_key == zob_key && tt->table_head[idx].depth == -1){
+    }else if(tt->table_head[idx].zob_key == zob_key && tt->table_head[idx].depth == -1 && tt->table_head[idx].num_using == -1){
         //node currently being explored by another branch
         search_data_t zero_data = {0,0,0,0,0,0,0};
-        #ifdef USE_MUTEX
+        tt->table_head[idx].num_using++;
         if(pthread_mutex_unlock(&(tt->mutex_arr[mut_idx]))){
             printf("Mutex lock error\n");
         }
-        #endif
         return zero_data;
     }else{
         search_data_t neg_data = {-1,-1,-1,-1,-1,-1,-1};
-        #ifdef USE_MUTEX
+        //printf("probably shouldn't get here... idk tho\n");
         if(pthread_mutex_unlock(&(tt->mutex_arr[mut_idx]))){
             printf("Mutex lock error\n");
         }
-        #endif
         return neg_data;
     }
 }
 
-void Insert_Trans_Table(U64 zob_key, int depth, search_data_t search_data, trans_table_t* tt){
+void Insert_Trans_Table(U64 zob_key, int depth, search_data_t* search_data, trans_table_t* tt){
     int idx = (zob_key+depth) % tt->size;
 
-    #ifdef USE_MUTEX
     int mut_idx = (zob_key+depth) % NUM_MUTEX;
     if(pthread_mutex_lock(&(tt->mutex_arr[mut_idx]))){
         printf("Mutex lock error\n");
     }
-    #endif
-    if(tt->table_head[idx].depth <= depth || tt->table_head[idx].depth == -1){
+    //if its a shallower depth, or unusued, and no threads are waiting for the result
+    if((tt->table_head[idx].depth <= depth || tt->table_head[idx].depth == -1) && tt->table_head[idx].num_using < 1){
         tt->table_head[idx].depth = depth;
         tt->table_head[idx].zob_key = zob_key;
-        Copy_Search_Data(&tt->table_head[idx].search_data, &search_data);
+        tt->table_head->num_using = -1;
+        Copy_Search_Data(&(tt->table_head[idx].search_data), search_data);
+    }else if(tt->table_head[idx].zob_key == zob_key && tt->table_head[idx].depth == -1 && tt->table_head->num_using > 0){
+        //if this is the correct index, and it has multiple threads waiting on it
+        tt->table_head[idx].depth = depth;
+        tt->table_head[idx].zob_key = zob_key;
+        Copy_Search_Data(&(tt->table_head[idx].search_data), search_data);
+        for(int i = 0; i < tt->table_head[idx].num_using; i++){
+            //for every thread that stopped searching while this node was searching, 
+            //we add an extra search data onto that.  Could add a multiply, but this
+            //should be fine.
+            Add_Search_Data(search_data, &(tt->table_head[idx].search_data));
+        }
+        tt->table_head[idx].num_using = -1;
     }
-    #ifdef USE_MUTEX
     if(pthread_mutex_unlock(&(tt->mutex_arr[mut_idx]))){
         printf("Mutex lock error\n");
     }
-    #endif
 }
 

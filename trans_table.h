@@ -16,6 +16,6 @@
 trans_table_t* Init_Trans_Table(int size);
 void Delete_Trans_Table(trans_table_t* tt);
 search_data_t Probe_Trans_Table(U64 zob_key, int depth, trans_table_t* tt);
-void Insert_Trans_Table(U64 zob_key, int depth, search_data_t search_data, trans_table_t* tt);
+void Insert_Trans_Table(U64 zob_key, int depth, search_data_t* search_data, trans_table_t* tt);
 
 #endif
