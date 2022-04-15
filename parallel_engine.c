@@ -4,6 +4,9 @@
 #include "movegen.h"
 #include <pthread.h>
 
+//THERE IS AN ERROR SOMEWHERE IN MY TRANSPOSITION TABLE.  IDK WHERE THOUGH.  GETS VERY TINY ERRORS AT DEPTH 7 
+//WITH LEAF NODE COUNTS BEING OFF (it fixed itself after re-running the program, so probably some race condidtions)
+
 /*This could potentially be more confusing than it needs to be, but the way I am planning on doing this is
     to have one function called to handle running the parallel search.  This function will generate all the moves for
     the top level, and spawn a thread for each of those moves.  Since each thread will be using a fair amount of memory,

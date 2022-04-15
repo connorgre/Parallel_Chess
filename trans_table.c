@@ -51,11 +51,13 @@ search_data_t Probe_Trans_Table(U64 zob_key, int depth, trans_table_t* tt){
         printf("Mutex lock error\n");
     }
     //we found the position
+    search_data_t data;
     if(tt->table_head[idx].zob_key == zob_key && tt->table_head[idx].depth == depth){
+        data = tt->table_head[idx].search_data;
         if(pthread_mutex_unlock(&(tt->mutex_arr[mut_idx]))){
             printf("Mutex lock error\n");
         }
-        return tt->table_head[idx].search_data;
+        return data;
     //first time encountering the position -- set the zob key but leave depth as -1.
     }else if(tt->table_head[idx].depth == -1 && tt->table_head[idx].zob_key == FULL){
         //node never been explored

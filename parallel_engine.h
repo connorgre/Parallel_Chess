@@ -7,6 +7,7 @@
 #include "move.h"
 #include <pthread.h>
 
+
 #define MAX_THREADS 8
 
 typedef struct Thread_Info{

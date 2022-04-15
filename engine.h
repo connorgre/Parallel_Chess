@@ -12,7 +12,7 @@
 #define MAX_MOVES 128    //going to assume that there won't be more than 128 moves in a position
 
 typedef struct search_data{
-    int pos_searched;
+    long pos_searched;
     int captures;
     int checks;
     int castles;
