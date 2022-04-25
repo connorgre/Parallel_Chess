@@ -1,8 +1,8 @@
 
-#ifndef PARALLEL_H
-#define PARALLEL_H
+#ifndef PARALLEL_PERFT_H
+#define PARALLEL_PERFT_H
 
-#include "engine.h"
+#include "perft.h"
 #include "board.h"
 #include "move.h"
 #include <pthread.h>

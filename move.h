@@ -20,7 +20,7 @@ void White_KingSide_Castle(Board_Data_t* board_data);
 void White_QueenSide_Castle(Board_Data_t* board_data);
 void Black_KingSide_Castle(Board_Data_t* board_data);
 void Black_QueenSide_Castle(Board_Data_t* board_data);
-
+void Undo_Move(Board_Data_t* curr_board, Board_Data_t* orig_board, move_t* move);
 char* String_From_Move(move_t move);
 
 byte Get_White_Castle_Change(Board_Data_t* board_data, U64 from, U64 to);

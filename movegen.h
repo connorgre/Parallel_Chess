@@ -18,6 +18,7 @@ void Get_All_Moves(Board_Data_t* board_data, move_t* movelist, int toMove);
 
 byte Set_Flags(Board_Data_t* board_data, int toMove, U64 from, U64 to);
 
+U64 Get_Team_Move_Mask(Board_Data_t* board_data, int toMove);
 U64 Get_Piece_Moves(Board_Data_t* board_data, int toMove, U64 pos, int type);
 U64 Get_King_Moves(Board_Data_t* board_data, int toMove, U64 k_pos);
 U64 Get_King_Moves_No_Castles(Board_Data_t* board_data, int toMove, U64 k_pos);

@@ -87,6 +87,20 @@ void Get_All_Moves(Board_Data_t* board_data, move_t* movelist, int toMove){
     return;
 }
 
+U64 Get_Team_Move_Mask(Board_Data_t* board_data, int toMove){
+    U64 mask = ZERO;
+    int team_offset = 6*toMove;
+    for(int i = 0 + team_offset; i < 6+team_offset; i++){
+        U64 pieces = board_data->pieces[i];
+        while(pieces){
+            U64 piece = Get_LSB(pieces);
+            pieces ^= piece;
+            mask |= Get_Piece_Moves(board_data, toMove, piece, i%6);
+        }
+    }
+    return mask;
+}
+
 byte Set_Flags(Board_Data_t* board_data, int toMove, U64 from, U64 to){
     U64 team_pawns = board_data->pieces[W_PAWN + 6*toMove];
     byte ep_mask = 0x00;

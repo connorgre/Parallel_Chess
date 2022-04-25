@@ -8,7 +8,7 @@
 #include "board.h"
 #include "move.h"
 #include "movegen.h"
-#include "engine.h"
+#include "perft.h"
 #include "trans_table.h"
 
 #define MAX_WORD_LEN 64
@@ -27,6 +27,6 @@ void Input_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* t
 void Input_Expanded_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt);
 void Input_Parallel_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt);
 void Reset_Trans_Table(trans_table_t* tt);
-
+void Input_Search(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt);
 
 #endif

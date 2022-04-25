@@ -4,6 +4,7 @@
 #define BIT_HELPER_H
 #define _GNU_SOURCE
 #include "board.h"
+#include "immintrin.h"
 
 #define left_wall   0x0101010101010101ULL
 #define right_wall  0x8080808080808080ULL
@@ -28,6 +29,8 @@ int GetY(U64 pos);
 U64 Get_LSB(U64 pos);
 void Get_Individual(U64 pos, U64* set_list);
 int PopCount(U64 pos);
+int PopCount_fast(U64 pos);
 int Get_Idx(U64 pos);
+__m256i AVX_PopCount(__m256i pos);
 
 #endif

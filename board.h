@@ -61,6 +61,7 @@ typedef struct Board_Data{
 Board_Data_t* Init_Board();
 void Delete_Board(Board_Data_t* board, int free_zob);
 void Copy_Board(Board_Data_t* copy, Board_Data_t* source_board);
+void Copy_Board_Data(Board_Data_t* copy, Board_Data_t* source);
 //sets the board up from given FEN string.
 //TODO: ADD IN EP, CASTLE, MOVE/HALFMOVE
 void Set_From_Fen(char* FEN, Board_Data_t* board);

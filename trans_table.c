@@ -11,7 +11,7 @@ trans_table_t* Init_Trans_Table(int size){
     trans_table_t* tt = (trans_table_t*)malloc(sizeof(trans_table_t));
     tt->table_head = (tt_entry_t*)malloc(sizeof(tt_entry_t) * size);
     
-    search_data_t neg_data = {-1,-1,-1,-1,-1,-1,-1};
+    search_data_t neg_data = {-1,-1,-1,-1,-1,-1,-1,-1};
     tt_entry_t neg_entry;
     neg_entry.search_data = neg_data;
     neg_entry.depth = -1;
@@ -63,7 +63,7 @@ search_data_t Probe_Trans_Table(U64 zob_key, int depth, trans_table_t* tt){
         //node never been explored
         tt->table_head[idx].zob_key = zob_key;
         tt->table_head[idx].num_using++;
-        search_data_t neg_data = {-1,-1,-1,-1,-1,-1,-1};
+        search_data_t neg_data = {-1,-1,-1,-1,-1,-1,-1,-1};
         if(pthread_mutex_unlock(&(tt->mutex_arr[mut_idx]))){
             printf("Mutex lock error\n");
         }
@@ -72,14 +72,14 @@ search_data_t Probe_Trans_Table(U64 zob_key, int depth, trans_table_t* tt){
         //(so no point in exploring it twice)
     }else if(tt->table_head[idx].zob_key == zob_key && tt->table_head[idx].depth == -1 && tt->table_head[idx].num_using == -1){
         //node currently being explored by another branch
-        search_data_t zero_data = {0,0,0,0,0,0,0};
+        search_data_t zero_data = {0,0,0,0,0,0,0,0};
         tt->table_head[idx].num_using++;
         if(pthread_mutex_unlock(&(tt->mutex_arr[mut_idx]))){
             printf("Mutex lock error\n");
         }
         return zero_data;
     }else{
-        search_data_t neg_data = {-1,-1,-1,-1,-1,-1,-1};
+        search_data_t neg_data = {-1,-1,-1,-1,-1,-1,-1,-1};
         //printf("probably shouldn't get here... idk tho\n");
         if(pthread_mutex_unlock(&(tt->mutex_arr[mut_idx]))){
             printf("Mutex lock error\n");

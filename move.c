@@ -147,6 +147,23 @@ void Do_Move(Board_Data_t* board_data, move_t* move){
     return;
 }
 
+//if we are doing just a normal move, we only want to copy the original flags back,
+//if we are undoing a flagged move (promotion, castle, or en passant), then just copy the 
+//board back over.
+void Undo_Move(Board_Data_t* curr_board, Board_Data_t* orig_board, move_t* move){
+    if(move->flags != 0){
+        Copy_Board(curr_board, orig_board);
+        return;
+    }else{
+    curr_board->pieces[(int)move->to_type] ^= (move->to);
+    curr_board->pieces[(int)move->from_type] ^= (move->from | move->to);
+
+    curr_board->team_tiles[(int)move->from_type/6] ^= (move->from | move->to);
+    curr_board->team_tiles[(int)move->to_type/6] ^= move->to;
+    Copy_Board_Data(curr_board, orig_board);
+    }
+}
+
 
 
 char* String_From_Move(move_t move){

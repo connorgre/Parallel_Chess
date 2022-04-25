@@ -1,6 +1,6 @@
-#include "parallel_engine.h"
+#include "parallel_perft.h"
 #include "move.h"
-#include "engine.h"
+#include "perft.h"
 #include "movegen.h"
 #include <pthread.h>
 

@@ -1,6 +1,7 @@
  
 #include "user_input.h"
-#include "parallel_engine.h"
+#include "parallel_perft.h"
+#include "engine.h"
 #include <time.h>
 #include <stdio.h>
 #include <sys/time.h>
@@ -35,7 +36,28 @@ void Handle_Input(char* input, Board_Data_t* board_data, trans_table_t* tt){
             Input_Perft(parsed_input, board_data, tt);
         }
     }
+    if(strcmp(p_in1, "search") == 0 || strcmp(p_in1, "Search") == 0){
+        Input_Search(parsed_input, board_data, tt);
+    }
     Free_Parsed_Input(parsed_input);
+}
+
+void Input_Search(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt){
+    int to_move = board_data->to_move;
+    int depth = parsed_input[1][0] - '0';
+    int ply = 0;
+
+    move_t best_move;
+    clock_t start = clock(), diff;
+    Search_Mem_t* search_mem = Init_Search_Memory();
+    int score = negmax(board_data, search_mem, tt, depth, ply, to_move, MIN, MAX, &best_move);
+
+    Delete_Search_Memory(search_mem);
+    diff = clock() - start;
+    long msec = diff * 1000 / CLOCKS_PER_SEC;
+    char* move_str = String_From_Move(best_move);
+    printf("Score: %d, Best Move: %s\n", score, move_str);
+    printf("\tMilliseconds: %ld\n", msec);
 }
 
 void Input_Parallel_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt){
@@ -75,7 +97,7 @@ void Input_Parallel_Perft(char** parsed_input, Board_Data_t* board_data, trans_t
     if(msec > 1000){
         printf("\tKnps: %ld\n", search_data.pos_searched/msec);
     }
-    printf("Searched: %d\n", search_data.pos_searched);
+    printf("Searched: %ld\n", search_data.pos_searched);
     printf("Captures: %d\n", search_data.captures);
     printf("En Passants: %d\n", search_data.en_passants);
     printf("Castles: %d\n", search_data.castles);
@@ -107,6 +129,8 @@ char* Input_Reset_String(char* input){
         return "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -";
     }else if(strcmp(input, "4m") == 0){
         return "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ -";
+    }else if(strcmp(input, "5") == 0){
+        return "3qkp/3pp1/8/6pQ/8/8/7P/KPPP4 b - -";
     }
     else {
         return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
@@ -153,7 +177,7 @@ void Input_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* t
     if(msec > 1000){
         printf("\t Knps: %ld\n", search_data.pos_searched/msec);
     }
-    printf("Searched: %d\n", search_data.pos_searched);
+    printf("Searched: %ld\n", search_data.pos_searched);
     printf("Captures: %d\n", search_data.captures);
     printf("En Passants: %d\n", search_data.en_passants);
     printf("Castles: %d\n", search_data.castles);

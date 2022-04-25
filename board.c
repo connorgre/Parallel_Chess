@@ -124,6 +124,15 @@ void Copy_Board(Board_Data_t* copy, Board_Data_t* source){
     memcpy(copy->team_tiles, source->team_tiles, COLOR_ARR_LEN);    
 }
 
+//this only copys the metadata of the board (doesn't do the pieces)
+void Copy_Board_Data(Board_Data_t* copy, Board_Data_t* source){
+    copy->occ = source->occ;
+    copy->ep_tile = source->ep_tile;
+    copy->cas_mask = source->cas_mask;
+    copy->to_move = source->to_move;
+    copy->zob_key = source->zob_key;
+}
+
 //sets the board up from given FEN string.
 //TODO: ADD IN EP, CASTLE, MOVE/HALFMOVE
 void Set_From_Fen(char* FEN, Board_Data_t* board){
