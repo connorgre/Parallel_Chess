@@ -18,3 +18,5 @@ Commands:
   If option="", the board is reset to the starting board
   if option="tt", then the transposition (hash) table is cleared
   
+"q"
+  Will exit the program and free up memory
