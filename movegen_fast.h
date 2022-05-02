@@ -26,7 +26,7 @@ U64 Get_Bishop_Moves_fast(Board_Data_t* board_data, int toMove, U64 b_pos);
 U64 Get_Knight_Moves_fast(Board_Data_t* board_data, int toMove, U64 n_pos);
 U64 Get_Pawn_Moves_fast(Board_Data_t* board_data, int toMove, U64 p_pos);
 U64 Get_Tile_Attackers_fast(Board_Data_t* board_data, U64 pos, int toMove);
-
+U64 Lookup_Tile_Attackers(Board_Data_t* board_data, U64 pos, int toMove);
 int In_Check_fast(Board_Data_t* board_data, int toMove);
 
 #endif

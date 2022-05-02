@@ -164,6 +164,18 @@ void Undo_Move(Board_Data_t* curr_board, Board_Data_t* orig_board, move_t* move)
     }
 }
 
+void Make_Null_Move(Board_Data_t* board_data){
+    board_data->to_move = (~board_data->to_move) & 1;
+    board_data->zob_key ^= board_data->zob_array[64][0];
+    if(board_data->ep_tile){
+        int ep_idx = Get_Idx((board_data->ep_tile >> (2*8)) | (board_data->ep_tile >> (5*8)));
+        board_data->zob_key ^= board_data->zob_array[65][ep_idx];
+    }
+    board_data->ep_tile = ZERO;
+}
+void Undo_Null_Move(Board_Data_t* copy, Board_Data_t* original){
+    Copy_Board_Data(copy, original);
+}
 
 
 char* String_From_Move(move_t move){

@@ -19,6 +19,14 @@ U64 Get_LSB(U64 p)
 {
     return p & (~(p-1));
 }
+U64 Get_MSB(U64 p){
+    U64 bit = p;
+    while(PopCount(bit) > 1)
+    {
+        bit &= (bit - 1);
+    }
+    return bit;
+}
 
 //fills loc_list with U64s of individual bits of piece
 //end of list is 0

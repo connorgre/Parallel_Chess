@@ -1,3 +1,9 @@
 {
-    "C_Cpp.errorSquiggles": "Disabled"
+    "C_Cpp.errorSquiggles": "Disabled",
+    "files.associations": {
+        "bit_helper.h": "c",
+        "initializer_list": "c",
+        "type_traits": "c",
+        "xstring": "c"
+    }
 }

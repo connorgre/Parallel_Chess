@@ -2,11 +2,15 @@
 #include "user_input.h"
 #include "parallel_perft.h"
 #include "engine.h"
+#include "Engine_Movegen.h"
+#include "trans_table.h"
+#include "evaluation.h"
+#include "Parallel_Engine.h"
 #include <time.h>
 #include <stdio.h>
 #include <sys/time.h>
 
-void Handle_Input(char* input, Board_Data_t* board_data, trans_table_t* tt){
+void Handle_Input(char* input, Board_Data_t* board_data, trans_table_t* engine_tt, perft_trans_table_t* perft_tt){
 
     char** parsed_input = Parse_Input(input);
     char* p_in1 = parsed_input[0];
@@ -14,7 +18,7 @@ void Handle_Input(char* input, Board_Data_t* board_data, trans_table_t* tt){
         if(strcmp(parsed_input[1], "zob") == 0){
             Reset_Zob_Key(board_data);
         }else if(strcmp(parsed_input[1],"tt") == 0){
-            Reset_Trans_Table(tt);
+            Reset_Trans_Table(perft_tt, engine_tt);
         }else{
             char* fen = Input_Reset_String(parsed_input[1]);
             Set_From_Fen(fen, board_data); 
@@ -29,38 +33,75 @@ void Handle_Input(char* input, Board_Data_t* board_data, trans_table_t* tt){
     }
     if(strcmp(p_in1, "perft") == 0 || strcmp(p_in1, "Perft") == 0){
         if(strcmp(parsed_input[1], "expanded") == 0 || strcmp(parsed_input[1], "Expanded") == 0){
-            Input_Expanded_Perft(parsed_input, board_data, tt);
+            Input_Expanded_Perft(parsed_input, board_data, perft_tt);
         }else if(strcmp(parsed_input[1], "parallel") == 0 || strcmp(parsed_input[1],"Parallel") == 0){
-            Input_Parallel_Perft(parsed_input, board_data, tt);
+            Input_Parallel_Perft(parsed_input, board_data, perft_tt);
         }else{
-            Input_Perft(parsed_input, board_data, tt);
+            Input_Perft(parsed_input, board_data, perft_tt);
         }
     }
     if(strcmp(p_in1, "search") == 0 || strcmp(p_in1, "Search") == 0){
-        Input_Search(parsed_input, board_data, tt);
+        if(strcmp(parsed_input[1], "parallel") == 0 || strcmp(parsed_input[1], "Parallel") == 0){
+            Input_Parallel_Search(parsed_input, board_data, engine_tt);
+        }else{
+            Input_Search(parsed_input, board_data, engine_tt);
+        } 
+        Reset_Trans_Table(perft_tt, engine_tt);
     }
     Free_Parsed_Input(parsed_input);
+}
+void Input_Parallel_Search(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt){
+    int depth = parsed_input[2][0] - '0';
+    if(depth > 10) depth = 1;
+    if(parsed_input[2][1] != '\0'){
+        depth *= 10;
+        depth += parsed_input[2][1] - '0';
+    }
+
+    move_t best_move;
+    eng_search_mem_t** search_mem = (eng_search_mem_t**)malloc(sizeof(eng_search_mem_t*) * (MAX_ENGINE_THREADS + 1));
+    for(int i = 0; i < MAX_ENGINE_THREADS+1; i++){
+        search_mem[i] = Init_Eng_Search_Mem();
+    }
+    eng_thread_info_t* eng_t_info = (eng_thread_info_t*)malloc(sizeof(eng_thread_info_t) * MAX_ENGINE_THREADS);
+    clock_t start = clock(), diff;
+    best_move = Parallel_Iterative_Deepening(board_data, search_mem, tt, depth, eng_t_info);
+    diff = clock() - start;
+    long msec = diff * 1000 / CLOCKS_PER_SEC;
+    char* move_str = String_From_Move(best_move);
+    printf("Score: %.2f, Best Move: %s\n", (float)best_move.score/PAWN_VAL, move_str);
+    printf("\tMilliseconds: %ld\n", msec);
+    
+    for(int i = 0; i < MAX_ENGINE_THREADS+1; i++){
+        Delete_Eng_Search_Mem(search_mem[i]);
+    }
+    free(search_mem);
+    free(eng_t_info);
 }
 
 void Input_Search(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt){
     int to_move = board_data->to_move;
     int depth = parsed_input[1][0] - '0';
-    int ply = 0;
+    if(depth > 10) depth = 1;
+    if(parsed_input[1][1] != '\0'){
+        depth *= 10;
+        depth += parsed_input[1][1] - '0';
+    }
 
     move_t best_move;
-    clock_t start = clock(), diff;
-    Search_Mem_t* search_mem = Init_Search_Memory();
-    int score = negmax(board_data, search_mem, tt, depth, ply, to_move, MIN, MAX, &best_move);
+    eng_search_mem_t* search_mem = Init_Eng_Search_Mem();
 
-    Delete_Search_Memory(search_mem);
+    clock_t start = clock(), diff;
+    best_move = Iterative_Deepening(board_data, search_mem, tt, depth, to_move, MIN, MAX);
     diff = clock() - start;
     long msec = diff * 1000 / CLOCKS_PER_SEC;
     char* move_str = String_From_Move(best_move);
-    printf("Score: %d, Best Move: %s\n", score, move_str);
+    printf("Score: %.2f, Best Move: %s\n", (float)best_move.score/PAWN_VAL, move_str);
     printf("\tMilliseconds: %ld\n", msec);
+    Delete_Eng_Search_Mem(search_mem);
 }
 
-void Input_Parallel_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt){
+void Input_Parallel_Perft(char** parsed_input, Board_Data_t* board_data, perft_trans_table_t* tt){
     int to_move;
     if(strcmp(parsed_input[2], "white") == 0 || strcmp(parsed_input[1], "White") == 0){
         to_move = WHITE;
@@ -106,16 +147,28 @@ void Input_Parallel_Perft(char** parsed_input, Board_Data_t* board_data, trans_t
     printf("CheckMates: %d\n", search_data.checkmates);
 }
 
-void Reset_Trans_Table(trans_table_t* tt){
-    int tt_size = tt->size;
+void Reset_Trans_Table(perft_trans_table_t* perft_tt, trans_table_t* eng_tt){
+    int perft_tt_size = perft_tt->size;
     search_data_t neg_data = {-1,-1,-1,-1,-1,-1,-1};
-    tt_entry_t neg_entry;
+    perft_tt_entry_t neg_entry;
     neg_entry.search_data = neg_data;
     neg_entry.depth = -1;
     neg_entry.zob_key = FULL;
     neg_entry.num_using = -1;
-    for(int i = 0; i < tt_size; i++){
-        tt->table_head[i] = neg_entry;
+    for(int i = 0; i < perft_tt_size; i++){
+        perft_tt->table_head[i] = neg_entry;
+    }
+
+    int eng_tt_size = eng_tt->size;
+    tt_entry_t default_entry;
+    default_entry.zob_key = FULL;
+    default_entry.depth = -100;
+    default_entry.move = Default_Small();
+    default_entry.flag = NO_FLAG;
+    eng_tt->default_entry = default_entry;
+    for(int i = 0; i < eng_tt_size; i++){
+        eng_tt->table_head[i] = default_entry;
+        eng_tt->q_head[i] = default_entry;
     }
 }
 //makes it so that I can easily load in different fen strings for testing.
@@ -131,13 +184,16 @@ char* Input_Reset_String(char* input){
         return "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ -";
     }else if(strcmp(input, "5") == 0){
         return "3qkp/3pp1/8/6pQ/8/8/7P/KPPP4 b - -";
-    }
-    else {
+    }else if(strcmp(input, "6") == 0){
+        return "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - ";
+    }else if(strcmp(input, "7") == 0){
+        return "r4rk1/pp1n1p1p/1nqP2p1/2b1P1B1/4NQ2/1B3P2/PP2K2P/2R5 w - -";
+    }else {
         return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
     }
 }
 
-void Input_Expanded_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt){
+void Input_Expanded_Perft(char** parsed_input, Board_Data_t* board_data, perft_trans_table_t* tt){
     int to_move = WHITE;
     if(strcmp(parsed_input[2], "black") == 0 || strcmp(parsed_input[2], "Black") == 0){
         to_move = BLACK;
@@ -150,7 +206,7 @@ void Input_Expanded_Perft(char** parsed_input, Board_Data_t* board_data, trans_t
     Delete_Search_Memory(search_mem);
 }
 
-void Input_Perft(char** parsed_input, Board_Data_t* board_data, trans_table_t* tt){
+void Input_Perft(char** parsed_input, Board_Data_t* board_data, perft_trans_table_t* tt){
     int to_move;
     if(strcmp(parsed_input[1], "white") == 0 || strcmp(parsed_input[1], "White") == 0){
         to_move = WHITE;
@@ -203,9 +259,6 @@ void Input_Print_Board(char** parsed_input, Board_Data_t* board_data){
         Print_Board(board_data->occ, board_data);
     }
     printf("To move: %d\n",board_data->to_move);
-    printf("Zob Key:   %lx\n",board_data->zob_key);
-    Reset_Zob_Key(board_data);
-    printf("Reset zob: %lx\n",board_data->zob_key);
 }
 
 void Print_Moves(char** parsed_input, Board_Data_t* board_data){

@@ -1,5 +1,6 @@
 #include "board.h"
 #include "bit_helper.h"
+#include "move_tables.h"
 #include <stdlib.h>
 
 #define ERROR_CHECK
@@ -10,6 +11,7 @@ Board_Data_t* Init_Board()
     Board_Data_t* board = (Board_Data_t*)malloc(sizeof(Board_Data_t));
     U64* pieces = (U64*)malloc(PIECE_ARR_LEN); // the +1 is so we have a slot to hold NO_PIECE (less if statements)
     U64* colors = (U64*)malloc(COLOR_ARR_LEN);  // again, +1 to hold noteam value
+    board->move_tables = NULL;
     board->pieces = pieces;
     board->team_tiles = colors;
     board->ep_tile = ZERO;
@@ -30,6 +32,7 @@ void Delete_Board(Board_Data_t* board, int free_zob)
             free(board->zob_array[i]);
         }
         free(board->zob_array);
+        Delete_Move_Table(board->move_tables);
     }
     free(board);
 }
@@ -58,7 +61,9 @@ void Init_Zob_Array(Board_Data_t* board_data){
         board_data->zob_array[i][NUM_PIECES] = ZERO;
     }
 }
-
+void Init_Board_Move_Table(Board_Data_t* board_data){
+    board_data->move_tables = Init_Move_Table();
+}
 //There potentially could be an error with Get_Idx being off by 1.  I might need to 
 //subtract 1.
 void Reset_Zob_Key(Board_Data_t* board_data){
@@ -119,7 +124,7 @@ void Copy_Board(Board_Data_t* copy, Board_Data_t* source){
     copy->to_move = source->to_move;
     copy->zob_key = source->zob_key;
     copy->zob_array = source->zob_array;
-
+    copy->move_tables = source->move_tables;
     memcpy(copy->pieces, source->pieces, PIECE_ARR_LEN);
     memcpy(copy->team_tiles, source->team_tiles, COLOR_ARR_LEN);    
 }
@@ -408,3 +413,30 @@ void Print_Board(U64 piece, Board_Data_t* board){
     printf("%s\n", print_buf);
 }
 
+int Verify_Board(Board_Data_t* board_data, int toMove){
+    int error = 0;
+    if(board_data->to_move != toMove){
+        error += 1;
+    }
+    for(int i = 0; i < NUM_PIECES; i++){
+        for(int j = 0; j < NUM_PIECES; j++){
+            if(i != j){
+                if((board_data->pieces[i] & board_data->pieces[j]) != ZERO){
+                    error += 1;
+                }
+            }
+        }
+    }
+    U64 w_tiles = ZERO;
+    U64 b_tiles = ZERO;
+    for(int i = 0; i < 6; i++){
+        w_tiles |= board_data->pieces[i];
+        b_tiles |= board_data->pieces[i+6];
+    }
+    if(w_tiles != board_data->team_tiles[WHITE]) error += 1;
+    if(b_tiles != board_data->team_tiles[BLACK]) error += 1;
+    if(PopCount_fast(board_data->pieces[W_KING]) != 1) error += 1;
+    if(PopCount_fast(board_data->pieces[B_KING]) != 1) error += 1;
+    if((w_tiles | b_tiles) != board_data->occ) error += 1;
+    return error;
+}

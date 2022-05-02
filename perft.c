@@ -5,11 +5,13 @@
 #include "movegen.h"
 #include "movegen_fast.h"
 #include "bit_helper.h"
-#include "trans_table.h"
+#include "perft_trans_table.h"
 #include "evaluation.h"
 #include <semaphore.h>
 #include <pthread.h>
 #include <stdio.h>
+
+#include "Engine_Movegen.h"
 
 //#define ERROR_CHECK
 #define USE_TT 1
@@ -17,7 +19,7 @@
 #define SCORE_BOARD 0
 
 
-search_data_t Perft(Board_Data_t* board_data, Search_Mem_t* search_mem, int depth, int ply, int isMaximizing, trans_table_t* tt){
+search_data_t Perft(Board_Data_t* board_data, Search_Mem_t* search_mem, int depth, int ply, int isMaximizing, perft_trans_table_t* tt){
    search_data_t search_data = {0,0,0,0,0,0,0,0};
     #ifdef ERROR_CHECK
         if(isMaximizing != board_data->to_move){
@@ -25,7 +27,7 @@ search_data_t Perft(Board_Data_t* board_data, Search_Mem_t* search_mem, int dept
         }
     #endif
     #if USE_TT
-        search_data_t tt_data = Probe_Trans_Table(board_data->zob_key, depth, tt);
+        search_data_t tt_data = Probe_Perft_Trans_Table(board_data->zob_key, depth, tt);
         if(tt_data.pos_searched != -1){
             #ifdef ERROR_CHECK
                 if(tt_data.pos_searched == 0){
@@ -67,12 +69,12 @@ search_data_t Perft(Board_Data_t* board_data, Search_Mem_t* search_mem, int dept
         } else{
             search_data.score = score;
             #if USE_TT
-                Insert_Trans_Table(board_data->zob_key, depth, &search_data, tt);
+                Insert_Perft_Trans_Table(board_data->zob_key, depth, &search_data, tt);
             #endif
             return search_data;
         }
     }
-
+            
     #if USE_AVX == 1
         Get_All_Moves_fast(board_data, search_mem->move_arr[ply], isMaximizing);
     #else
@@ -120,13 +122,13 @@ search_data_t Perft(Board_Data_t* board_data, Search_Mem_t* search_mem, int dept
         }
     }
     #if USE_TT
-        Insert_Trans_Table(board_data->zob_key, depth, &search_data, tt);
+        Insert_Perft_Trans_Table(board_data->zob_key, depth, &search_data, tt);
     #endif
     return search_data;
 }
 
 
-void Perft_Expanded(Board_Data_t* board_data, Search_Mem_t* search_mem, int depth, int ply, int isMaximizing, trans_table_t* tt){
+void Perft_Expanded(Board_Data_t* board_data, Search_Mem_t* search_mem, int depth, int ply, int isMaximizing, perft_trans_table_t* tt){
 
     move_t* moves = search_mem->move_arr[0];
     Get_All_Moves(board_data, moves, isMaximizing);
@@ -210,7 +212,7 @@ Search_Mem_t* Init_Search_Memory(){
 
 void Delete_Search_Memory(Search_Mem_t* search_mem){
     for(int i = 0; i < MAX_PLY; i++){
-        free(search_mem->copy_arr[i]);
+        Delete_Board(search_mem->copy_arr[i],0);
         free(search_mem->move_arr[i]);
     }
     free(search_mem->copy_arr);

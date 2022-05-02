@@ -28,7 +28,7 @@
 
 
 
-search_data_t Parallel_Perft(Board_Data_t* board_data, int depth, int isMaximizing, trans_table_t* tt){
+search_data_t Parallel_Perft(Board_Data_t* board_data, int depth, int isMaximizing, perft_trans_table_t* tt){
 
     move_t* moves = (move_t*)malloc(sizeof(move_t)*MAX_MOVES);
     search_data_t search_data;
@@ -71,7 +71,7 @@ search_data_t Parallel_Perft(Board_Data_t* board_data, int depth, int isMaximizi
     return search_data;
 }
 
-search_data_t Parallel_Perft_Limited(Board_Data_t* board_data, int depth, int isMaximizing, trans_table_t* tt){
+search_data_t Parallel_Perft_Limited(Board_Data_t* board_data, int depth, int isMaximizing, perft_trans_table_t* tt){
 
     move_t* moves = (move_t*)malloc(sizeof(move_t)*MAX_MOVES);
     search_data_t search_data;
@@ -156,7 +156,7 @@ search_data_t Parallel_Perft_Limited(Board_Data_t* board_data, int depth, int is
 void* Perft_Thread_Limited(void * thread_info){
     thread_info_t* t_info = (thread_info_t*)thread_info;
     int depth = t_info->depth;
-    trans_table_t* tt = t_info->tt;
+    perft_trans_table_t* tt = t_info->tt;
     Search_Mem_t* search_mem = t_info->search_mem;
     Board_Data_t* board_data = t_info->board_data;
     pthread_mutex_t* sd_mut = t_info->search_data_mut;
@@ -195,7 +195,7 @@ void* Perft_Thread_Limited(void * thread_info){
 void* Perft_Thread(void * thread_info){
     thread_info_t* t_info = (thread_info_t*)thread_info;
     int depth = t_info->depth;
-    trans_table_t* tt = t_info->tt;
+    perft_trans_table_t* tt = t_info->tt;
     Search_Mem_t* search_mem = t_info->search_mem;
     Board_Data_t* board_data = t_info->board_data;
     pthread_mutex_t* sd_mut = t_info->search_data_mut;

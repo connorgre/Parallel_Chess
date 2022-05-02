@@ -5,6 +5,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+
+typedef long unsigned int U64;
 //defining constants
 #define NUM_PIECES 12
 #define ONE 1ULL
@@ -21,7 +24,6 @@
 #define BK_CAS_ZOB 3
 #define BQ_CAS_ZOB 4
 
-typedef long unsigned int U64;
 typedef unsigned char byte;
 enum Piece
 {
@@ -46,9 +48,18 @@ enum Color{
     BLACK = 1,
     NO_TEAM = 2
 };
+typedef struct Move_Tables{
+    U64** line_tables;
+    U64* rook_mask;
+    U64* bishop_mask;
+    U64** rook_table;
+    U64** bishop_table;
+} move_table_t;
 typedef struct Board_Data{
     U64* pieces;    //array of 12 U64 to hold piece locations
     U64* team_tiles;
+
+    move_table_t* move_tables;
     U64 ep_tile;
     U64 occ;
     byte cas_mask;
@@ -68,7 +79,9 @@ void Set_From_Fen(char* FEN, Board_Data_t* board);
 void Print_Board(U64 piece, Board_Data_t* board);
 void Print_Castling_Rights(byte cas_mask);
 
+void Init_Board_Move_Table(Board_Data_t* board_data);
 void Init_Zob_Array(Board_Data_t* board_data);
 void Reset_Zob_Key(Board_Data_t* board_data);
 
+int Verify_Board(Board_Data_t* board_data, int toMove);
 #endif

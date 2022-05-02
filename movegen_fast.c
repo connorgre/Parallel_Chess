@@ -1,12 +1,12 @@
-
-
 #include "movegen_fast.h"
 #include "movegen.h"
 #include <immintrin.h>
 #include <emmintrin.h>
-
+#include "move_tables.h"
 //#define ERROR_CHECK
-
+#define USE_LOOKUP 1
+//doesn't give any speedup... :(
+    
 //returns a pointer to an array of the possible moves   !! NOT the legal moves -- still need to filter those
 //TODO: add in en passant, promotions, castling
 void Get_All_Moves_fast(Board_Data_t* board_data, move_t* movelist, int toMove){
@@ -91,15 +91,53 @@ void Get_All_Moves_fast(Board_Data_t* board_data, move_t* movelist, int toMove){
 }
 
 U64 Get_Piece_Moves_fast(Board_Data_t* board_data, int toMove, U64 pos, int type){
+    #ifdef ERROR_CHECK
+        ;
+        U64 lookup;
+        U64 normal;
+    #endif
     switch(type){
         case(W_KING):
             return Get_King_Moves_fast(board_data, toMove, pos);
         case(W_QUEEN):
-            return Get_Queen_Moves_fast(board_data, toMove, pos);
+            #ifdef ERROR_CHECK 
+                lookup = Lookup_Queen(board_data, toMove, pos);
+                normal = Get_Queen_Moves_fast(board_data, toMove, pos);
+                if(lookup != normal){
+                    printf("Error, queen lookup != normal \n");
+                }
+            #endif
+            #if USE_LOOKUP
+                return Lookup_Queen(board_data, toMove, pos);
+            #else
+                return Get_Queen_Moves_fast(board_data, toMove, pos);
+            #endif
         case(W_ROOK):
-            return Get_Rook_Moves_fast(board_data, toMove, pos);
+            #ifdef ERROR_CHECK 
+                lookup = Lookup_Rook(board_data, toMove, pos);
+                normal = Get_Rook_Moves_fast(board_data, toMove, pos);
+                if(lookup != normal){
+                    printf("Error, rook lookup != normal \n");
+                }
+            #endif
+            #if USE_LOOKUP
+                return Lookup_Rook(board_data, toMove, pos);
+            #else
+                return Get_Rook_Moves_fast(board_data, toMove, pos);
+            #endif
         case(W_BISHOP):
-            return Get_Bishop_Moves_fast(board_data, toMove, pos);
+            #ifdef ERROR_CHECK 
+                lookup = Lookup_Bishop(board_data, toMove, pos);
+                normal = Get_Bishop_Moves_fast(board_data, toMove, pos);
+                if(lookup != normal){
+                    printf("Error, bishop lookup != normal \n");
+                }
+            #endif
+            #if USE_LOOKUP
+                return Lookup_Bishop(board_data, toMove, pos);
+            #else
+                return Get_Bishop_Moves_fast(board_data, toMove, pos);
+            #endif
         case(W_KNIGHT):
             return Get_Knight_Moves_fast(board_data, toMove, pos);
         case(W_PAWN):
@@ -194,8 +232,19 @@ U64 Get_Team_Move_Mask_fast(Board_Data_t* board_data, int toMove){
 
 int In_Check_fast(Board_Data_t* board_data, int toMove){
     U64 k_pos = board_data->pieces[W_KING + 6*toMove];
-    U64 attackers = Get_Tile_Attackers_fast(board_data, k_pos, toMove);
-    return (attackers != 0);
+    #if ERROR_CHECK
+        if(k_pos == ZERO){
+            printf("Error, kpos == ZERO\n");
+            return 1;
+        }
+    #endif
+    U64 attackers;
+    #if USE_LOOKUP
+        attackers = Lookup_Tile_Attackers(board_data, k_pos, toMove);
+    #else
+        attackers = Get_Tile_Attackers_fast(board_data, k_pos, toMove);
+    #endif
+    return (attackers != ZERO);
 }
 
 //I need this so I don't go into a recursive loop when checking the kings legal moves
@@ -215,6 +264,21 @@ U64 Get_King_Moves_No_Castles_fast(Board_Data_t* board_data, int toMove, U64 k_p
     return (moves0 | moves1 | moves2) & ~board_data->team_tiles[toMove];
 }
 
+U64 Lookup_Tile_Attackers(Board_Data_t* board_data, U64 pos, int toMove){
+    U64 pawn_attackers = ((((pos & ~left_wall) << 7) | ((pos & ~right_wall) << 9)) & board_data->pieces[B_PAWN]);
+    if(toMove == BLACK) {
+        pawn_attackers = (((pos & ~right_wall) >> 7) | ((pos & ~left_wall) >> 9)) & board_data->pieces[W_PAWN];
+    }
+    U64 tile_attackers = ZERO;
+    tile_attackers |= Lookup_Rook(board_data, toMove, pos) & (board_data->pieces[B_ROOK - 6*toMove] | board_data->pieces[B_QUEEN - 6*toMove]);
+    tile_attackers |= Lookup_Bishop(board_data, toMove, pos) & (board_data->pieces[B_BISHOP - 6*toMove] | board_data->pieces[B_QUEEN - 6*toMove]);
+    tile_attackers |= Get_Knight_Moves_fast(board_data, toMove, pos) & (board_data->pieces[B_KNIGHT - 6*toMove]);
+    tile_attackers |= Get_King_Moves_No_Castles_fast(board_data, toMove, pos) & (board_data->pieces[B_KING - 6*toMove]);
+
+    tile_attackers |= pawn_attackers;
+
+    return tile_attackers;
+}
 U64 Get_Tile_Attackers_fast(Board_Data_t* board_data, U64 pos, int toMove){
     U64 pawn_attackers = ((((pos & ~left_wall) << 7) | ((pos & ~right_wall) << 9)) & board_data->pieces[B_PAWN]);
     if(toMove == BLACK) {
@@ -454,4 +518,3 @@ U64 Get_Queen_Moves_fast(Board_Data_t* board_data, int toMove, U64 q_pos){
 
     return rook0 | rook1 | bishop0 | bishop1;
 }
-

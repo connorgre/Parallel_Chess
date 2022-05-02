@@ -27,6 +27,7 @@
 int GetX(U64 pos);
 int GetY(U64 pos);
 U64 Get_LSB(U64 pos);
+U64 Get_MSB(U64 pos);
 void Get_Individual(U64 pos, U64* set_list);
 int PopCount(U64 pos);
 int PopCount_fast(U64 pos);

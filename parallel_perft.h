@@ -11,7 +11,7 @@
 #define MAX_THREADS 8
 
 typedef struct Thread_Info{
-    trans_table_t* tt;
+    perft_trans_table_t* tt;
     Search_Mem_t* search_mem;
     search_data_t* search_data;
     int depth;
@@ -24,8 +24,8 @@ typedef struct Thread_Info{
     int* free_threads;
 } thread_info_t;
 
-search_data_t Parallel_Perft(Board_Data_t* board_data, int depth, int isMaximizing, trans_table_t* tt);
-search_data_t Parallel_Perft_Limited(Board_Data_t* board_data, int depth, int isMaximizing, trans_table_t* tt);
+search_data_t Parallel_Perft(Board_Data_t* board_data, int depth, int isMaximizing, perft_trans_table_t* tt);
+search_data_t Parallel_Perft_Limited(Board_Data_t* board_data, int depth, int isMaximizing, perft_trans_table_t* tt);
 void* Perft_Thread(void *);
 void* Perft_Thread_Limited(void * thread_info);
 int Check_All_Open(int* free_threads);
