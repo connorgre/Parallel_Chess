@@ -18,5 +18,13 @@ Commands:
   If option="", the board is reset to the starting board
   if option="tt", then the transposition (hash) table is cleared
   
+"print <option>"
+  Will print the board
+  Options for "black" and "white"
+  
+"move <move>"
+  Will do the move specified (ie a4b5 moves the piece on a4 to b5)
+  Castling is OO, OOO, oo, ooo
+  
 "q"
   Will exit the program and free up memory
