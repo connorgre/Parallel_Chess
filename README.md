@@ -10,7 +10,7 @@ Commands:
   Wouldn't go past depth 5 most of the time
 
 "search <depth>"
-  to use the actual engine, can hit depth 15 in 3-8 seconds in most positions
+  to use the actual engine, can hit depth 15 in 1-8 seconds in most positions
   Parallel version does not work yet
  
 "reset <option>"
