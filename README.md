@@ -11,7 +11,6 @@ Commands:
 
 "search [parallel] <depth>"
   to use the actual engine, can hit depth 15 in 1-8 seconds in most positions
-  Parallel version does not work yet
  
 "reset <option>"
   can reset the board to different positions (specify number)
@@ -28,3 +27,5 @@ Commands:
   
 "q"
   Will exit the program and free up memory
+  
+compile with make <opt#> (use opt1, opt2, opt3 to compile with 01,02,03)
