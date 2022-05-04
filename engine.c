@@ -207,17 +207,17 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
             Make_Null_Move(copy);
             null_moves_searched++;
             //alpha=beta*-1 -- if another thread raised alpha
-            if(parallel_beta != NULL){
-                if((*parallel_beta)*-1 > alpha){
-                    alpha = (*parallel_beta) * -1;
+            if(parallel_alpha != NULL){
+                if((*parallel_alpha)*-1 < beta){
+                    beta = (*parallel_alpha) * -1;
                 }
             }
-            score_move = negmax(copy, search_mem, tt, depth - 1 - null_r, ply + 1, (~isMaximizing & 1), (alpha + 1) * -1, alpha * -1, 0, 0, 1, 1, NULL, NULL);
+            score_move = negmax(copy, search_mem, tt, depth - 1 - null_r, ply + 1, (~isMaximizing & 1), 0 - beta, 1 - beta, 0, 0, 1, 1, NULL, NULL);
             score_move.score *= -1;
             Undo_Null_Move(copy, board_data); 
-            if(score_move.score >= (alpha) * -1){
+            if(score_move.score >= beta){
                 tt_flag = BETA_FLAG;
-                best_move.score = score_move.score;
+                best_move.score = beta;
                 #if USE_TT == 1                        
                     Insert_Trans_Table(board_data->zob_key, depth, tt_flag, best_move, tt);
                 #endif
@@ -275,14 +275,14 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
                         }
                     #endif
                     //alpha=beta*-1 -- if a different thread raised alpha
-                    if(parallel_beta != NULL){
-                        if((*parallel_beta)*-1 > alpha){
-                            alpha = (*parallel_beta) * -1;
+                    if(parallel_alpha != NULL){
+                        if((*parallel_alpha)*-1 < beta){
+                            beta = (*parallel_alpha) * -1;
                         }
                     }
                     score_move.score = MIN-1;
                     if(In_Check_fast(copy, isMaximizing) == 0){
-                        score_move = negmax(copy, search_mem, tt, depth - 1 - multi_r, ply + 1, (~isMaximizing & 1), (alpha + 1) * -1, alpha * -1, 1, 0, 0, 1,NULL, NULL);
+                        score_move = negmax(copy, search_mem, tt, depth - 1 - multi_r, ply + 1, (~isMaximizing & 1), 0 - beta, 1 - beta, 1, 0, 0, 1,NULL, NULL);
                         score_move.score *= -1;
                         moves_done++;
                     }
@@ -290,7 +290,7 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
                         best_move = score_move;
                     }
                     Undo_Move(copy, board_data, moves[move_idx]); 
-                    if(best_move.score >= (alpha * -1)) { 
+                    if(score_move.score >= beta) { 
                         num_cut++;
                         if(num_cut == cut_threshold){
                             cut_pruned++;
