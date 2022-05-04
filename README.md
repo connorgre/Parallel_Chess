@@ -9,7 +9,7 @@ Commands:
   Does ~10M positions / second (more on some positions)
   Wouldn't go past depth 5 most of the time
 
-"search <depth>"
+"search [parallel] <depth>"
   to use the actual engine, can hit depth 15 in 1-8 seconds in most positions
   Parallel version does not work yet
  
