@@ -22,6 +22,7 @@
 #define CHECK_EXTENSION 1
 #define FUTILITY_PRUNE 1
 #define EXTENDED_FUTILITY_PRUNE 1
+#define ASPIRATION_WINDOW 1
 #define ERROR_CHECK 0
 
 long int depth_moves = 0;
@@ -47,12 +48,23 @@ move_t Iterative_Deepening(Board_Data_t* board_data, eng_search_mem_t* search_me
     futility_pruned = 0;
     extended_futility_pruned = 0;
     
+
     int initial_d = (depth > 3) ? 3 : depth;
     move_t best_move = negmax(board_data, search_mem, tt, initial_d, 0, isMaximizing, alpha, beta, 1, 1, 0, 1, NULL, NULL);
     for(int i = 4; i <= depth; i++){
         //Reset_History_Table(search_mem->history_array);
+        #if ASPIRATION_WINDOW == 1
+            int window_size = PAWN_VAL;
+            alpha = best_move.score - window_size;
+            beta = best_move.score + window_size;
+        #endif
         Halve_History_Table(search_mem->history_array);
         best_move = negmax(board_data, search_mem, tt, i, 0, isMaximizing, alpha, beta, 1, 1, 0, 1, NULL, NULL);
+        #if ASPIRATION_WINDOW == 1
+            if(best_move.score <= alpha || best_move.score >= beta){
+                best_move = negmax(board_data, search_mem, tt, i, 0, isMaximizing, MIN, MAX, 1, 1, 0, 1, NULL, NULL);
+            }
+        #endif
     }
     
     #if PRINT_SEARCHED == 1
@@ -203,13 +215,7 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
             score_move = negmax(copy, search_mem, tt, depth - 1 - null_r, ply + 1, (~isMaximizing & 1), (alpha + 1) * -1, alpha * -1, 0, 0, 1, 1, NULL, NULL);
             score_move.score *= -1;
             Undo_Null_Move(copy, board_data); 
-            //beta=alpha*-1 -- another thread lowered beta
-            if(parallel_alpha != NULL){
-                if(*parallel_alpha * -1 < beta){
-                    beta = *parallel_alpha * -1;
-                }
-            }
-            if(score_move.score >= beta){
+            if(score_move.score >= (alpha) * -1){
                 tt_flag = BETA_FLAG;
                 best_move.score = score_move.score;
                 #if USE_TT == 1                        
@@ -284,17 +290,10 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
                         best_move = score_move;
                     }
                     Undo_Move(copy, board_data, moves[move_idx]); 
-                    //beta=alpha*-1 -- if a different thread lowered beta
-                    if(parallel_alpha != NULL){
-                        if((*parallel_alpha) * -1 < beta){
-                            beta = (*parallel_alpha) * -1;
-                        }
-                    }
-                    if(best_move.score >= beta) { 
+                    if(best_move.score >= (alpha * -1)) { 
                         num_cut++;
                         if(num_cut == cut_threshold){
                             cut_pruned++;
-                            best_move.score = beta;
                             #if USE_TT == 1
                                 Insert_Trans_Table(board_data->zob_key, depth, BETA_FLAG, best_move, tt);
 
