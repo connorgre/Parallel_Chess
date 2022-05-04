@@ -51,7 +51,7 @@ typedef struct Eng_Search_Mem{
 } eng_search_mem_t;
 
 move_t Iterative_Deepening(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_table_t* tt, int depth, int isMaximizing, int alpha, int beta);
-move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_table_t* tt, int depth, int ply, int isMaximizing, int alpha, int beta, int allow_null, int onPV, int cut);
+move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_table_t* tt, int depth, int ply, int isMaximizing, int alpha, int beta, int allow_null, int onPV, int cut, int probe_tt, int* parallel_alpha, int* parallel_beta);
 move_t Quiscence_Search(Board_Data_t* board_data, eng_search_mem_t* search_mem, int ply, int isMaximizing, int alpha, int beta, trans_table_t* tt);
 eng_search_mem_t* Init_Eng_Search_Mem();
 void Delete_Eng_Search_Mem(eng_search_mem_t* search_mem);

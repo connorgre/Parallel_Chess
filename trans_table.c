@@ -24,8 +24,8 @@ trans_table_t* Init_Trans_Table(int size){
         tt->table_head[i] = default_entry;
         tt->q_head[i] = default_entry;
     }
-    pthread_mutex_t* mutex_arr = (pthread_mutex_t*)malloc(sizeof(*mutex_arr)*NUM_MUTEX);
-    for(int i = 0; i < NUM_MUTEX; i++){
+    pthread_mutex_t* mutex_arr = (pthread_mutex_t*)malloc(sizeof(*mutex_arr)*ENG_NUM_MUTEX);
+    for(int i = 0; i < ENG_NUM_MUTEX; i++){
         if(pthread_mutex_init(&mutex_arr[i], NULL)){
             printf("mutex create error\n");
         }
@@ -38,7 +38,7 @@ trans_table_t* Init_Trans_Table(int size){
 void Delete_Trans_Table(trans_table_t* tt){
     free(tt->table_head);
     free(tt->q_head);
-    for(int i = 0; i < NUM_MUTEX; i++){
+    for(int i = 0; i < ENG_NUM_MUTEX; i++){
         if(pthread_mutex_destroy(&(tt->mutex_arr[i]))){
             printf("mutex destroy error\n");
         }
@@ -54,7 +54,7 @@ void Delete_Trans_Table(trans_table_t* tt){
     //if this happens, then we treat it as the worst possible move, and return MIN for the score (done in engine)
 move_t Probe_Trans_Table(U64 zob_key, int depth, int alpha, int beta, trans_table_t* tt){
     int idx = ((zob_key) % (tt->size));
-    int mut_idx = (zob_key) % NUM_MUTEX;  
+    int mut_idx = (zob_key) % ENG_NUM_MUTEX;  
     if(pthread_mutex_lock(&(tt->mutex_arr[mut_idx]))){
         printf("Mutex lock error\n");
     }
@@ -99,7 +99,7 @@ move_t Probe_Trans_Table(U64 zob_key, int depth, int alpha, int beta, trans_tabl
 //simple always replace if at a higher depth
 void Insert_Trans_Table(U64 zob_key, int depth, int flag, move_t move, trans_table_t* tt){
     int idx = ((zob_key) % (tt->size));
-    int mut_idx = (zob_key) % NUM_MUTEX;
+    int mut_idx = (zob_key) % ENG_NUM_MUTEX;
     if(pthread_mutex_lock(&(tt->mutex_arr[mut_idx]))){
         printf("Mutex lock error\n");
     }
@@ -117,7 +117,7 @@ void Insert_Trans_Table(U64 zob_key, int depth, int flag, move_t move, trans_tab
 
 void Reset_Trans_Table_Entry(U64 zob_key, trans_table_t* tt, int q_table){
     int idx = (zob_key % tt->size);
-    int mut_idx = (zob_key) % NUM_MUTEX;
+    int mut_idx = (zob_key) % ENG_NUM_MUTEX;
     if(pthread_mutex_lock(&(tt->mutex_arr[mut_idx]))){
         printf("Mutex lock error\n");
     }
@@ -130,11 +130,14 @@ void Reset_Trans_Table_Entry(U64 zob_key, trans_table_t* tt, int q_table){
     if(entry->zob_key == zob_key){
         *entry = tt->default_entry;
     }
+    if(pthread_mutex_unlock(&(tt->mutex_arr[mut_idx]))){
+        printf("Mutex lock error\n");
+    }
 }
 
 move_t Probe_Q_Trans_Table(U64 zob_key, int alpha, int beta, trans_table_t* tt){
     int idx = ((zob_key) % (tt->size));
-    int mut_idx = (zob_key) % NUM_MUTEX;  
+    int mut_idx = (zob_key) % ENG_NUM_MUTEX;  
     if(pthread_mutex_lock(&(tt->mutex_arr[mut_idx]))){
         printf("Mutex lock error\n");
     }
@@ -172,7 +175,7 @@ move_t Probe_Q_Trans_Table(U64 zob_key, int alpha, int beta, trans_table_t* tt){
 }
 void Insert_Q_Trans_Table(U64 zob_key, int flag, move_t move, trans_table_t* tt){
     int idx = ((zob_key) % (tt->size));
-    int mut_idx = (zob_key) % NUM_MUTEX;
+    int mut_idx = (zob_key) % ENG_NUM_MUTEX;
     if(pthread_mutex_lock(&(tt->mutex_arr[mut_idx]))){
         printf("Mutex lock error\n");
     }

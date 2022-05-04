@@ -8,7 +8,7 @@
 
 //I use an array of mutexes to have less likelyhood of collisions in the transposition tables
 //I don't think this will cause too much of a slowdown.
-#define NUM_MUTEX 511
+#define ENG_NUM_MUTEX 10009
     //scores that I don't think can be reached by a position, 
 #define INVALID_SCORE -12345
 #define BEING_SEARCHED 12345

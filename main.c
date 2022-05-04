@@ -19,7 +19,7 @@ int main()
     Set_From_Fen(init_fen, board_data); 
     Reset_Zob_Key(board_data);
     perft_trans_table_t* perft_tt = Init_Perft_Trans_Table(10009);
-    trans_table_t* engine_tt = Init_Trans_Table(10000019);
+    trans_table_t* engine_tt = Init_Trans_Table(25000009);
     while(1)
     {
         printf(">> ");

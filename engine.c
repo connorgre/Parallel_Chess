@@ -14,7 +14,7 @@
 #define USE_TT 1
 #define NULL_PRUNE 1
 #define PRINT_SEARCHED 1
-#define USE_KILLER_MOVES 1 
+#define USE_KILLER_MOVES 1
 #define LATE_MOVE_REDUCTION 1
 #define HISTORY_HUERISTIC 1
 #define NEGSCOUT 1
@@ -32,8 +32,8 @@ long int null_moves_searched = 0;
 long int max_ply_reached = 0;
 long int cut_tested = 0;
 long int cut_pruned = 0;
-long int futility_pruned;
-long int extended_futility_pruned;
+long int futility_pruned = 0;
+long int extended_futility_pruned = 0;
 
 move_t Iterative_Deepening(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_table_t* tt, int depth, int isMaximizing, int alpha, int beta){
     depth_moves = 0;
@@ -46,11 +46,13 @@ move_t Iterative_Deepening(Board_Data_t* board_data, eng_search_mem_t* search_me
     cut_pruned = 0;
     futility_pruned = 0;
     extended_futility_pruned = 0;
-    move_t best_move = negmax(board_data, search_mem, tt, 3, 0, isMaximizing, alpha, beta, 1, 1, 0);
+    
+    int initial_d = (depth > 3) ? 3 : depth;
+    move_t best_move = negmax(board_data, search_mem, tt, initial_d, 0, isMaximizing, alpha, beta, 1, 1, 0, 1, NULL, NULL);
     for(int i = 4; i <= depth; i++){
         //Reset_History_Table(search_mem->history_array);
         Halve_History_Table(search_mem->history_array);
-        best_move = negmax(board_data, search_mem, tt, i, 0, isMaximizing, alpha, beta, 1, 1, 0);
+        best_move = negmax(board_data, search_mem, tt, i, 0, isMaximizing, alpha, beta, 1, 1, 0, 1, NULL, NULL);
     }
     
     #if PRINT_SEARCHED == 1
@@ -64,7 +66,7 @@ move_t Iterative_Deepening(Board_Data_t* board_data, eng_search_mem_t* search_me
 }
 
 
-move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_table_t* tt, int depth, int ply, int isMaximizing, int alpha, int beta, int allow_null, int onPV, int cut){
+move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_table_t* tt, int depth, int ply, int isMaximizing, int alpha, int beta, int allow_null, int onPV, int cut, int probe_tt, int* parallel_alpha, int* parallel_beta){
     //if(depth_moves % 5000 == 1) {printf("Search moves: %ld\n",depth_moves); }
     
     #if ERROR_CHECK
@@ -81,12 +83,13 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
 
     move_t score_move = Default_Move();
     move_t best_move = Default_Move();
-    best_move.score = MIN;
+    best_move.score = MIN + ply;
+    
     #if USE_TT == 1
         int tt_flag = ALPHA_FLAG;
         move_t tt_move = Probe_Trans_Table(board_data->zob_key, depth, alpha, beta, tt);
 
-        if(tt_move.score != INVALID_SCORE){
+        if(tt_move.score != INVALID_SCORE && probe_tt == 1){
             trans_pos_found++;
             if(tt_move.score == BEING_SEARCHED){
                 //return max if the position is being searched, so it appears super bad in the next level up,
@@ -96,7 +99,8 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
                         printf("Error, shouldn't return being searched from ply 0\n");
                     #endif                 
                 }
-                tt_move.score = MAX-1;
+                //tt_move.score = INVALID_SCORE;
+                tt_move.score = MAX - ply;
                 return tt_move;
             }else{
                 if(Verify_Legal_Move(board_data, &tt_move)){
@@ -108,6 +112,18 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
     #endif
     if(depth <= 0 || ply >= MAX_PLY){
         #if Q_SEARCH == 1
+            //if another thread lowered beta
+            if(parallel_alpha != NULL){
+                if((*parallel_alpha) * -1 < beta){
+                    beta = (*parallel_alpha) * -1;
+                }
+            }
+            //if another thread raised alpha
+            if(parallel_beta != NULL){
+                if((*parallel_beta) * -1 > alpha){
+                    alpha = (*parallel_beta) * -1;
+                }
+            }
             best_move = Quiscence_Search(board_data, search_mem, ply, isMaximizing, alpha, beta, tt);
         #else
             int mult = (isMaximizing == WHITE) ? 1 : -1;
@@ -122,12 +138,13 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
     Board_Data_t* copy = search_mem->copy_arr[ply];
     Copy_Board(copy, board_data);
 
-    int in_check = In_Check_fast(board_data, isMaximizing);
-
+    #if FUTILITY_PRUNE == 1 || CHECK_EXTENSION == 1 || NULL_PRUNE == 1
+        int in_check = In_Check_fast(board_data, isMaximizing);
+    #endif
     //if we cannot raise our score above alpha - threshold, 
     //dont bother searching the next depth
     #if FUTILITY_PRUNE == 1
-        if(depth == 1 && in_check == 0){
+        if(depth == 1 && in_check == 0 && onPV == 0){
             int mult = (isMaximizing == WHITE) ? 1 : -1;
             int score = mult * score_board_simple(board_data);
             
@@ -148,7 +165,7 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
             }
         }
         #if EXTENDED_FUTILITY_PRUNE == 1
-            if(depth == 2 && in_check == 0){
+            if(depth == 2 && in_check == 0 && onPV == 0){
                 int mult = (isMaximizing == WHITE) ? 1 : -1;
                 int score = mult * score_board_simple(board_data);
                 if(score < alpha){
@@ -177,9 +194,21 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
             //a free move, then we assume we have a beta cutoff
             Make_Null_Move(copy);
             null_moves_searched++;
-            score_move = negmax(copy, search_mem, tt, depth - 1 - null_r, ply + 1, (~isMaximizing & 1), (alpha + 1) * -1, alpha * -1, 0, 0, 1);
+            //alpha=beta*-1 -- if another thread raised alpha
+            if(parallel_beta != NULL){
+                if((*parallel_beta)*-1 > alpha){
+                    alpha = (*parallel_beta) * -1;
+                }
+            }
+            score_move = negmax(copy, search_mem, tt, depth - 1 - null_r, ply + 1, (~isMaximizing & 1), (alpha + 1) * -1, alpha * -1, 0, 0, 1, 1, NULL, NULL);
             score_move.score *= -1;
             Undo_Null_Move(copy, board_data); 
+            //beta=alpha*-1 -- another thread lowered beta
+            if(parallel_alpha != NULL){
+                if(*parallel_alpha * -1 < beta){
+                    beta = *parallel_alpha * -1;
+                }
+            }
             if(score_move.score >= beta){
                 tt_flag = BETA_FLAG;
                 best_move.score = score_move.score;
@@ -207,7 +236,13 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
         int num_cut = 0;
         int cut_threshold = multi_r - 1;
         int max_moves = 4 * multi_r;
-        if(depth > multi_r && cut == 1 && in_check == 0){
+        if(depth > multi_r && cut == 1 && in_check == 0 && onPV == 0){
+            #if ERROR_CHECK == 1
+                if(onPV != 0){
+                    printf("Error, doing multi-cut on PV\n");
+                }
+            #endif
+            
             cut_tested++;
             for(int movetype = 0; movetype < NUM_MOVE_TYPES; movetype++){
                 int move_idx = 0;
@@ -233,9 +268,15 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
                             Verify_Board(copy, (~isMaximizing & 1));
                         }
                     #endif
+                    //alpha=beta*-1 -- if a different thread raised alpha
+                    if(parallel_beta != NULL){
+                        if((*parallel_beta)*-1 > alpha){
+                            alpha = (*parallel_beta) * -1;
+                        }
+                    }
                     score_move.score = MIN-1;
                     if(In_Check_fast(copy, isMaximizing) == 0){
-                        score_move = negmax(copy, search_mem, tt, depth - 1 - multi_r, ply + 1, (~isMaximizing & 1), (alpha + 1) * -1, alpha * -1, 1, 0, 0);
+                        score_move = negmax(copy, search_mem, tt, depth - 1 - multi_r, ply + 1, (~isMaximizing & 1), (alpha + 1) * -1, alpha * -1, 1, 0, 0, 1,NULL, NULL);
                         score_move.score *= -1;
                         moves_done++;
                     }
@@ -243,6 +284,12 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
                         best_move = score_move;
                     }
                     Undo_Move(copy, board_data, moves[move_idx]); 
+                    //beta=alpha*-1 -- if a different thread lowered beta
+                    if(parallel_alpha != NULL){
+                        if((*parallel_alpha) * -1 < beta){
+                            beta = (*parallel_alpha) * -1;
+                        }
+                    }
                     if(best_move.score >= beta) { 
                         num_cut++;
                         if(num_cut == cut_threshold){
@@ -296,6 +343,7 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
                     }
                 }
             #endif
+            //if a parallel thread has managed to raise alpha, raise it for this thread
             if(movetype != ATTACK_MOVES && movetype != NORMAL_MOVES){
                 if(Verify_Legal_Move(board_data, moves[move_idx]) == 0){
                     move_idx++;
@@ -318,13 +366,35 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
                     Verify_Board(copy, (~isMaximizing & 1));
                 }
             #endif
+            //alpha=beta*-1 -- if a different thread raised alpha
+            if(parallel_beta != NULL){
+                if((*parallel_beta)*-1 > alpha){
+                    if(rev_beta == alpha + 1){
+                        rev_beta = (*parallel_beta) * -1 + 1;
+                    }
+                    alpha = (*parallel_beta) * -1;
+                }
+            }
             score_move.score = MIN-1;
             if(In_Check_fast(copy, isMaximizing) == 0){
-                score_move = negmax(copy, search_mem, tt, depth - 1 - lmr_val, ply + 1, (~isMaximizing & 1), rev_beta * -1, alpha * -1, 1, onPV, next_cut);
+                score_move = negmax(copy, search_mem, tt, depth - 1 - lmr_val, ply + 1, (~isMaximizing & 1), rev_beta * -1, alpha * -1, 1, onPV, next_cut, 1, NULL, NULL);
                 score_move.score *= -1;
                 #if NEGSCOUT == 1
+                    //alpha=beta*-1 -- if a different thread raised alpha
+                    if(parallel_beta != NULL){
+                        if((*parallel_beta)*-1 > alpha){
+                            alpha = (*parallel_beta) * -1;
+                        }
+                    }
+                    //beta=alpha*-1 -- if a different thread lowered beta
+                    if(parallel_alpha != NULL){
+                        if((*parallel_alpha)*-1 < beta){
+                            beta = (*parallel_alpha) * -1;
+                        }
+                    }
                     if(score_move.score > alpha && score_move.score < beta && moves_done > 0){
-                        score_move = negmax(copy, search_mem, tt, depth - 1 - lmr_val, ply + 1, (~isMaximizing & 1), beta * -1, alpha * -1, 1, onPV, next_cut);
+                        //dont probe the transposition table at root node tho
+                        score_move = negmax(copy, search_mem, tt, depth - 1 - lmr_val, ply + 1, (~isMaximizing & 1), beta * -1, alpha * -1, 1, onPV, next_cut, 0, NULL, NULL);
                         score_move.score *= -1;
                     }
                 #endif
@@ -339,15 +409,39 @@ move_t negmax(Board_Data_t* board_data, eng_search_mem_t* search_mem,  trans_tab
                 best_move = *moves[move_idx];
                 best_move.score = score_move.score;
             }
+            //alpha=beta*-1 -- if a different thread raised alpha
+            if(parallel_beta != NULL){
+                if((*parallel_beta)*-1 > alpha){
+                    alpha = (*parallel_beta) * -1;
+                }
+            }
+            //beta=alpha*-1 -- if a different thread lowered beta
+            if(parallel_alpha != NULL){
+                if((*parallel_alpha)*-1 < beta){
+                    beta = (*parallel_alpha) * -1;
+                }
+            }
             #if ALPHA_BETA_PRUNE == 1
                 #if LATE_MOVE_REDUCTION == 1
                     //if we were doing a late move reduction failed high, research at full depth
                     if(lmr_val != 0 && score_move.score > alpha){
-                        score_move = negmax(copy, search_mem, tt, depth -1, ply + 1, (~isMaximizing & 1), beta * -1, alpha * -1, 1, onPV, next_cut);
+                        score_move = negmax(copy, search_mem, tt, depth -1, ply + 1, (~isMaximizing & 1), beta * -1, alpha * -1, 1, onPV, next_cut, 1, NULL, NULL);
                         score_move.score *= -1;
                     }
                 #endif
                 Undo_Move(copy, board_data, moves[move_idx]);
+                //alpha=beta*-1 -- if a different thread raised alpha
+                if(parallel_beta != NULL){
+                    if((*parallel_beta)*-1 > alpha){
+                        alpha = (*parallel_beta) * -1;
+                    }
+                }
+                //beta=alpha*-1 -- if a different thread lowered beta
+                if(parallel_alpha != NULL){
+                    if((*parallel_alpha)*-1 < beta){
+                        beta = (*parallel_alpha) * -1;
+                    }
+                }
                 if(score_move.score > alpha) { 
                     #if LATE_MOVE_REDUCTION == 1
                         failed_high = 1;
@@ -430,6 +524,7 @@ move_t Quiscence_Search(Board_Data_t* board_data, eng_search_mem_t* search_mem, 
             if(tt_move.score == BEING_SEARCHED){
                 //return max if the position is being searched, so it appears super bad in the next level up,
                 //then it just wont be searched.
+                //tt_move.score = INVALID_SCORE;
                 tt_move.score = MAX-1;
                 return tt_move;
             }else{
@@ -451,7 +546,9 @@ move_t Quiscence_Search(Board_Data_t* board_data, eng_search_mem_t* search_mem, 
     if(ply >= MAX_PLY){
         if(in_check == 0){
             score_move.score = mult * score_board_fast(board_data);
-            tt_flag = EXACT_FLAG;
+            #if USE_TT == 1
+                tt_flag = EXACT_FLAG;
+            #endif
         }else{
             score_move.score = MIN + ply;
         }

@@ -64,10 +64,17 @@ void Input_Parallel_Search(char** parsed_input, Board_Data_t* board_data, trans_
         search_mem[i] = Init_Eng_Search_Mem();
     }
     eng_thread_info_t* eng_t_info = (eng_thread_info_t*)malloc(sizeof(eng_thread_info_t) * MAX_ENGINE_THREADS);
-    clock_t start = clock(), diff;
+    
+    struct timeval start, end;
+    gettimeofday(&start,NULL);
+
     best_move = Parallel_Iterative_Deepening(board_data, search_mem, tt, depth, eng_t_info);
-    diff = clock() - start;
-    long msec = diff * 1000 / CLOCKS_PER_SEC;
+    
+    gettimeofday(&end,NULL);
+    long sec_diff = (long)(end.tv_sec - start.tv_sec);
+    long usec_diff = (long)(end.tv_usec - start.tv_usec);
+    long msec = (sec_diff * 1000) + (usec_diff / 1000);
+    
     char* move_str = String_From_Move(best_move);
     printf("Score: %.2f, Best Move: %s\n", (float)best_move.score/PAWN_VAL, move_str);
     printf("\tMilliseconds: %ld\n", msec);
@@ -91,10 +98,16 @@ void Input_Search(char** parsed_input, Board_Data_t* board_data, trans_table_t* 
     move_t best_move;
     eng_search_mem_t* search_mem = Init_Eng_Search_Mem();
 
-    clock_t start = clock(), diff;
+    struct timeval start, end;
+    gettimeofday(&start,NULL);
+
     best_move = Iterative_Deepening(board_data, search_mem, tt, depth, to_move, MIN, MAX);
-    diff = clock() - start;
-    long msec = diff * 1000 / CLOCKS_PER_SEC;
+    
+    gettimeofday(&end,NULL);
+    long sec_diff = (long)(end.tv_sec - start.tv_sec);
+    long usec_diff = (long)(end.tv_usec - start.tv_usec);
+    long msec = (sec_diff * 1000) + (usec_diff / 1000);
+
     char* move_str = String_From_Move(best_move);
     printf("Score: %.2f, Best Move: %s\n", (float)best_move.score/PAWN_VAL, move_str);
     printf("\tMilliseconds: %ld\n", msec);

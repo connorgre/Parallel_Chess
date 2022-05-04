@@ -29,8 +29,8 @@ typedef struct Engine_Thread_Info{
     int* free_threads;
     int depth; 
     int ply;
-    int alpha; 
-    int beta;
+    int* alpha; 
+    int* beta;
     int* moves_done;
 } eng_thread_info_t;
 
