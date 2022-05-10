@@ -26,6 +26,6 @@ Commands:
   Castling is OO, OOO, oo, ooo
   
 "q"
-  Will exit the program and free up memory
+  Will exit the program
   
 compile with make \<opt#\> (use opt1, opt2, opt3 to compile with 01,02,03)
